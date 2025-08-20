@@ -1,0 +1,36 @@
+# --- Project-specific ---
+input/
+output/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+.eggs/
+dist/
+build/
+*.manifest
+*.spec
+
+# --- Virtual environment ---
+.venv/
+env/
+venv/
+ENV/
+.env
+.env.*
+
+# --- IDE / Editor ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- Logs / Misc ---
+*.log
+.DS_Store
+Thumbs.db

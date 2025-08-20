@@ -1,0 +1,223 @@
+{
+  "doc_title_template": "Application Summary \u2014 {app_id}",
+  "app_name_field_label": "Application Name",
+  "sources": {
+    "A": {
+      "path": "C:\\Users\\8A1493897\\Development Workspace\\python projects\\extract-app-data\\input\\Workstream #2b Applications.xlsx",
+      "sheet_name_default": "Workstream #2b Applications",
+      "id_column_default": "BA_ESATS_IDENTIFIER"
+    },
+    "B": {
+      "path": "C:\\Users\\8A1493897\\Development Workspace\\python projects\\extract-app-data\\input\\source_summary_App_SIS.xlsx",
+      "sheet_name_default": "All",
+      "id_column_default": "ESATS_ID"
+    },
+    "C": {
+      "path": "C:\\Users\\8A1493897\\Development Workspace\\python projects\\extract-app-data\\input\\source_summary_App_Database.xlsx",
+      "sheet_name_default": "All",
+      "id_column_default": "ESATS_ID"
+    },
+    "D": {
+      "path": "C:\\Users\\8A1493897\\Development Workspace\\python projects\\extract-app-data\\input\\source_summary_App_Interfaces.xlsx",
+      "sheet_name_default": "All",
+      "id_column_default": "SEND_ESATS_ID"
+    }
+  },
+  "fields": [
+    {
+      "label": "Application Name",
+      "source": "A",
+      "column": "BA_NAME"
+    },
+    {
+      "label": "Description",
+      "source": "A",
+      "column": "BA_DESCRIPTION"
+    },
+    {
+      "label": "Availability Classification",
+      "source": "A",
+      "column": "BA_AVAILABILITY_CLASSIFICATION"
+    },
+    {
+      "label": "Availability Target",
+      "source": "A",
+      "column": "BA_AVAILABILITY_TARGET"
+    },
+    {
+      "label": "Days of the Week",
+      "source": "A",
+      "column": "BA_DAYS_OF_WEEK"
+    },
+    {
+      "label": "Operating Hours",
+      "source": "A",
+      "column": "BA_HOURS_OF_DAY"
+    },
+    {
+      "label": "RPO",
+      "source": "A",
+      "column": "BA_RECOVERY_POINT_OBJECTIVE"
+    },
+    {
+      "label": "RTO",
+      "source": "A",
+      "column": "BA_RECOVERY_TIME_OBJECTIVE"
+    },
+    {
+      "label": "Restoration Target",
+      "source": "A",
+      "column": "BA_RESTORATION_TARGET"
+    },
+    {
+      "label": "Number of Users",
+      "source": "A",
+      "column": "# Users"
+    },
+    {
+      "label": "Application Size",
+      "source": "A",
+      "column": "Application Size"
+    },
+    {
+      "label": "Business Owner",
+      "source": "A",
+      "column": "Business System Manager"
+    },
+    {
+      "label": "Business System Manager - Email",
+      "source": "A",
+      "column": "Business System Manager e-mail"
+    },
+    {
+      "label": "Application Manager",
+      "source": "A",
+      "column": "Application Manager"
+    },
+    {
+      "label": "Application Manager - Email",
+      "source": "A",
+      "column": "Application Manager e-mail"
+    },
+    {
+      "label": "Development Manager",
+      "source": "A",
+      "column": "Development Manager"
+    },
+    {
+      "label": "Development Manager e-mail",
+      "source": "A",
+      "column": "Development Manager e-mail"
+    },
+    {
+      "label": "Application Architect",
+      "source": "A",
+      "column": "Application Architect"
+    },
+    {
+      "label": "Application Architect e-mail",
+      "source": "A",
+      "column": "Application Architect e-mail"
+    },
+    {
+      "label": "Environment(s)",
+      "source": "B",
+      "column": "ENVIRONMENT",
+      "aggregate": "unique_join",
+      "join": ", "
+    },
+    {
+      "label": "Servers by Environment",
+      "source": "B",
+      "aggregate": "group_by",
+      "group_by_column": "ENVIRONMENT",
+      "value_column": "SERVER",
+      "style": "bulleted",
+      "key_order": [
+        "Prod",
+        "Test",
+        "Dev"
+      ],
+      "unique": true
+    },
+    {
+      "label": "Operating System",
+      "source": "B",
+      "column": "OS_NAME",
+      "aggregate": "unique_join",
+      "join": ", "
+    },
+    {
+      "label": "OS Version",
+      "source": "B",
+      "column": "OS_VERSION",
+      "aggregate": "unique_join",
+      "join": ", "
+    },
+    {
+      "label": "Database Servers by Environment",
+      "source": "C",
+      "aggregate": "group_by",
+      "group_by_column": "PHASE",
+      "value_column": "SERVER",
+      "style": "bulleted",
+      "key_order": [
+        "Prod",
+        "Test",
+        "Dev"
+      ],
+      "unique": true
+    },
+    {
+      "label": "DB Instance",
+      "source": "C",
+      "column": "INSTANCE",
+      "aggregate": "unique_join",
+      "join": ", "
+    },
+    {
+      "label": "DB Name",
+      "source": "C",
+      "column": "DBNAME",
+      "aggregate": "unique_join",
+      "join": ", "
+    },
+    {
+      "label": "DBMS",
+      "source": "C",
+      "column": "DBMS",
+      "aggregate": "unique_join",
+      "join": ", "
+    },
+    {
+      "label": "DBMS Version",
+      "source": "C",
+      "column": "DBMSVERSION",
+      "aggregate": "unique_join",
+      "join": ", "
+    },
+    {
+      "label": "Patch Level",
+      "source": "C",
+      "column": "PATCHLEVEL",
+      "aggregate": "unique_join",
+      "join": ", "
+    },
+    {
+      "label": "Downstream Dependencies",
+      "source": "D",
+      "aggregate": "dependencies",
+      "match_column": "SEND_ESATS_ID",
+      "return_column": "REC_ESATS_ID",
+      "join": ", "
+    },
+    {
+      "label": "Upstream Dependencies",
+      "source": "D",
+      "aggregate": "dependencies",
+      "match_column": "REC_ESATS_ID",
+      "return_column": "SEND_ESATS_ID",
+      "join": ", "
+    }
+  ]
+}
