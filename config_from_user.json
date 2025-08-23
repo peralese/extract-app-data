@@ -1,4 +1,15 @@
 {
+  "main_filename_template": "./output/{app}-{app_id}-{ts}.md",
+  "extra_files": {
+    "servers": {
+      "title_template": "Server Inventory — {app_id}",
+      "filename_template": "./output/{app}-{app_id}-{ts}-servers.md"
+    },
+    "databases": {
+      "title_template": "Database Inventory — {app_id}",
+      "filename_template": "./output/{app}-{app_id}-{ts}-databases.md"
+    }
+  },
   "doc_title_template": "Application Summary \u2014 {app_id}",
   "app_name_field_label": "Application Name",
   "sources": {
@@ -120,40 +131,15 @@
       "column": "Application Architect e-mail"
     },
     {
-      "label": "Environment(s)",
+      "label": "Environment / Server / OS Summary",
       "source": "B",
-      "column": "ENVIRONMENT",
-      "aggregate": "unique_join",
-      "join": ", "
-    },
-    {
-      "label": "Servers by Environment",
-      "source": "B",
-      "aggregate": "group_by",
-      "group_by_column": "ENVIRONMENT",
-      "value_column": "SERVER",
-      "style": "bulleted",
-      "key_order": [
-        "Prod",
-        "Test",
-        "Dev"
-      ],
-      "unique": true
-    },
-    {
-      "label": "Operating System",
-      "source": "B",
-      "column": "OS_NAME",
-      "aggregate": "unique_join",
-      "join": ", "
-    },
-    {
-      "label": "OS Version",
-      "source": "B",
-      "column": "OS_VERSION",
-      "aggregate": "unique_join",
-      "join": ", "
-    },
+      "aggregate": "inventory_summary",
+      "env_column": "ENVIRONMENT",
+      "server_column": "SERVER",
+      "os_name_column": "OS_NAME",
+      "os_version_column": "OS_VERSION",
+      "show_db_hosts": false
+    }, 
     {
       "label": "Database Servers by Environment",
       "source": "C",
@@ -161,14 +147,9 @@
       "group_by_column": "PHASE",
       "value_column": "SERVER",
       "style": "bulleted",
-      "key_order": [
-        "Prod",
-        "Test",
-        "Dev"
-      ],
       "unique": true
     },
-    {
+    { 
       "label": "DB Instance",
       "source": "C",
       "column": "INSTANCE",
@@ -195,14 +176,15 @@
       "column": "DBMSVERSION",
       "aggregate": "unique_join",
       "join": ", "
-    },
-    {
-      "label": "Patch Level",
-      "source": "C",
-      "column": "PATCHLEVEL",
-      "aggregate": "unique_join",
-      "join": ", "
-    },
+  },
+  {
+    "label": "Patch Level",
+    "source": "C",
+    "column": "PATCHLEVEL",
+    "aggregate": "unique_join",
+    "join": ", "
+  },
+
     {
       "label": "Downstream Dependencies",
       "source": "D",
@@ -218,6 +200,39 @@
       "match_column": "REC_ESATS_ID",
       "return_column": "SEND_ESATS_ID",
       "join": ", "
+    },
+    {
+      "label": "Server Inventory",
+      "source": "B",
+      "aggregate": "inventory_table",
+      "emit_file": "servers",
+      "columns": ["SERVER", "ENVIRONMENT", "OS_NAME", "OS_VERSION"],
+      "headers": {
+        "SERVER": "Server",
+        "ENVIRONMENT": "Environment",
+        "OS_NAME": "OS Name",
+        "OS_VERSION": "OS Version"
+      },
+      "sort_by": ["ENVIRONMENT", "SERVER"],
+      "env_column": "ENVIRONMENT"
+    },
+    {
+      "label": "Database Inventory",
+      "source": "C",
+      "aggregate": "inventory_table",
+      "emit_file": "databases",
+      "columns": ["SERVER", "PHASE", "DBMS", "DBMSVERSION", "INSTANCE", "DBNAME", "PATCHLEVEL"],
+      "headers": {
+        "SERVER": "Server",
+        "PHASE": "Environment",
+        "DBMS": "DBMS",
+        "DBMSVERSION": "DBMS Version",
+        "INSTANCE": "Instance",
+        "DBNAME": "DB Name",
+        "PATCHLEVEL": "Patch Level"
+      },
+      "sort_by": ["PHASE", "SERVER"],
+      "env_column": "PHASE"
     }
   ]
 }
