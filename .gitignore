@@ -1,6 +1,10 @@
 # --- Project-specific ---
 input/
 output/
+*.txt
+*.csv
+*.json
+*.xlsx
 
 # --- Python ---
 __pycache__/

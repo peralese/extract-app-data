@@ -217,7 +217,7 @@ def extract_fields(cfg, app_id, source_overrides):
             values = []
             for _, r in mm.iterrows():
                 v = r[ret_col]
-                if pd.isna(v): 
+                if pd.isna(v):
                     continue
                 values.append(str(v).strip())
             values = stable_unique(values)
@@ -225,7 +225,6 @@ def extract_fields(cfg, app_id, source_overrides):
 
         #---- inventory summary table ----
         elif aggregate == "inventory_summary":
-        # Column names (override in config if needed)
             env_col = fld.get("env_column", "ENVIRONMENT")
             server_col = fld.get("server_column", "SERVER")
             os_name_col = fld.get("os_name_column", "OS_NAME")
@@ -290,10 +289,8 @@ def extract_fields(cfg, app_id, source_overrides):
             if env_col in df.columns:
                 df[env_col] = df[env_col].apply(normalize_env)
 
-            # Filter out fully-empty rows in requested cols (optional, tidy)
             df = df.dropna(how="all", subset=cols)
 
-            # Safe sort (only keep sort columns that exist)
             sort_by = [c for c in sort_by if c in df.columns]
             if sort_by:
                 df = df.sort_values(by=sort_by, kind="stable")
@@ -334,7 +331,6 @@ def extract_fields(cfg, app_id, source_overrides):
         elif aggregate not in ("inventory_table", "inventory_summary"):
             lines.append(f"**{label}:** {rendered if rendered else '_(not found)_'}")
 
-
     # --- finalize & write all files ---
     ts = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     main_title = cfg.get("doc_title_template", "Application Summary — {app_id}").format(app_id=app_id)
@@ -350,7 +346,6 @@ def extract_fields(cfg, app_id, source_overrides):
 
     # Determine filenames
     files_written = []
-    # main file (keep your existing behavior)
     safe_app = sanitize_filename(app_name if app_name else "App")
     ts = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 
@@ -360,13 +355,10 @@ def extract_fields(cfg, app_id, source_overrides):
 
     # Main file goes inside run_folder
     if cfg.get("main_filename_template"):
-        # allow template override, but root it inside run_folder
         fname = cfg["main_filename_template"].format(app_id=app_id, app=safe_app, ts=ts)
         main_out = os.path.join(run_folder, os.path.basename(fname))
     else:
         main_out = os.path.join(run_folder, f"{safe_app}-{app_id}.md")
-
-
 
     # Write main
     main_text = "\n".join(outputs["main"])
@@ -376,7 +368,7 @@ def extract_fields(cfg, app_id, source_overrides):
 
     # Write extras
     for key, meta in cfg.get("extra_files", {}).items():
-        if key == "main": 
+        if key == "main":
             continue
         if key not in outputs:
             continue  # nothing emitted
@@ -385,17 +377,97 @@ def extract_fields(cfg, app_id, source_overrides):
         out_path = os.path.join(run_folder, os.path.basename(fname))
         with open(out_path, "w", encoding="utf-8") as f:
             f.write("\n".join(outputs[key]))
-
             files_written.append(out_path)
 
-    # Return main text + app_name (for CLI print)
     return main_text, app_name or ""
 
+# ------------------------
+# NEW: batch ID utilities
+# ------------------------
+def _strip_and_keep(s: str) -> str:
+    return re.sub(r"\s+", "", s)
+
+def load_app_ids_from_file(path: str, ids_col: str = None):
+    """
+    Accepts CSV, TXT, or Excel.
+    - TXT: one ID per line, or comma/space separated.
+    - CSV/XLSX: tries to auto-detect a column named like 'app_id' if ids_col not provided.
+    Returns a list[str] of non-empty IDs (order preserved, duplicates removed).
+    """
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"IDs file not found: {path}")
+
+    ids = []
+
+    ext = os.path.splitext(path)[1].lower()
+    try:
+        if ext in [".csv"]:
+            df = pd.read_csv(path, dtype=str, keep_default_na=False)
+            ids = _extract_ids_from_df(df, ids_col)
+        elif ext in [".xlsx", ".xls"]:
+            df = pd.read_excel(path, dtype=str, keep_default_na=False, engine="openpyxl")
+            ids = _extract_ids_from_df(df, ids_col)
+        elif ext in [".txt"]:
+            with open(path, "r", encoding="utf-8") as f:
+                raw = f.read()
+            # allow \n, comma, semi-colon, spaces
+            parts = re.split(r"[,\n;\t ]+", raw)
+            ids = [p.strip() for p in parts if p and p.strip()]
+        else:
+            # Fallback: try CSV first, then TXT
+            try:
+                df = pd.read_csv(path, dtype=str, keep_default_na=False)
+                ids = _extract_ids_from_df(df, ids_col)
+            except Exception:
+                with open(path, "r", encoding="utf-8") as f:
+                    raw = f.read()
+                parts = re.split(r"[,\n;\t ]+", raw)
+                ids = [p.strip() for p in parts if p and p.strip()]
+    except Exception as e:
+        raise ValueError(f"Failed to parse IDs from '{path}': {e}")
+
+    # de-dup while preserving order; ignore blank
+    seen = set()
+    final = []
+    for i in ids:
+        key = _strip_and_keep(str(i))
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        final.append(i)
+    if not final:
+        raise ValueError("No valid app IDs found in IDs file.")
+    return final
+
+def _extract_ids_from_df(df: pd.DataFrame, ids_col: str = None):
+    if df is None or df.empty:
+        return []
+    cols = [c for c in df.columns]
+    pick = None
+    if ids_col and ids_col in cols:
+        pick = ids_col
+    else:
+        # heuristic: prefer columns named like 'app_id', 'application_id', 'appid', else take the first column
+        lowered = {c.lower(): c for c in cols}
+        for guess in ["app_id", "application_id", "appid", "applicationid", "id"]:
+            if guess in lowered:
+                pick = lowered[guess]
+                break
+        if pick is None:
+            pick = cols[0]
+    series = df[pick].astype(str)
+    return [s.strip() for s in series if s and str(s).strip()]
+
+# ------------------------
+
 def main():
-    p = argparse.ArgumentParser(description="Extract app data from multiple Excel workbooks into a Markdown summary.")
+    p = argparse.ArgumentParser(description="Extract app data from multiple Excel workbooks into Markdown summaries.")
+    grp = p.add_mutually_exclusive_group(required=True)
+    grp.add_argument("--app-id", help="Single Application ID to look up (original behavior).")
+    grp.add_argument("--ids-file", help="Path to a file containing multiple Application IDs (CSV/XLSX/TXT).")
+    p.add_argument("--ids-col", help="(Optional) Column name to read IDs from when using --ids-file for CSV/XLSX.")
     p.add_argument("--config", required=True, help="Path to JSON config defining sources and fields.")
-    p.add_argument("--app-id", required=True, help="Application ID to look up.")
-    p.add_argument("--out", required=False, help="Output markdown file path. If omitted, auto-generates to ./output/AppName-AppID-YYYYMMDD-HHMMSS.md")
+    p.add_argument("--out", required=False, help="(Unused for batch). For single ID, custom output filename. Otherwise ignored.")
     p.add_argument("--source", action="append", help="Override a source path like A=/path/to/file.xlsx (can repeat).")
     args = p.parse_args()
 
@@ -403,12 +475,37 @@ def main():
         with open(args.config, "r", encoding="utf-8") as f:
             cfg = json.load(f)
         overrides = parse_source_overrides(args.source)
-        md, app_name = extract_fields(cfg, args.app_id, overrides)
 
-        print("Done.")
+        if args.app_id:
+            # Single-run (original)
+            md, app_name = extract_fields(cfg, args.app_id, overrides)
+            print("Done.")
+            return
+
+        # Batch mode
+        app_ids = load_app_ids_from_file(args.ids_file, ids_col=args.ids_col)
+        print(f"Found {len(app_ids)} app id(s) to process.")
+        errors = []
+        for i, app_id in enumerate(app_ids, start=1):
+            try:
+                print(f"[{i}/{len(app_ids)}] Processing {app_id} ...")
+                extract_fields(cfg, app_id, overrides)
+            except Exception as e:
+                msg = f"{app_id}: {e}"
+                errors.append(msg)
+                print(f"ERROR: {msg}", file=sys.stderr)
+
+        if errors:
+            print("\nCompleted with errors for the following IDs:", file=sys.stderr)
+            for e in errors:
+                print(f"- {e}", file=sys.stderr)
+            sys.exit(2)
+
+        print("Batch complete.")
     except Exception as e:
         print(f"ERROR: {e}", file=sys.stderr)
         sys.exit(1)
 
 if __name__ == "__main__":
     main()
+
